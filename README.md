@@ -48,7 +48,8 @@
 - `LICENSE`：标准 MIT 许可证；
 - `README.md`：项目和使用说明；
 - `DERIVATIVE.md`：衍生版的许可义务与建议发布文案；
-- `RELEASE.md`：GitHub 发布步骤、费用与审核说明。
+- `CONTRIBUTORS.md`：贡献者名单与分工；
+- `RELEASE.md`：GitHub 发布步骤、费用与审核说明（内部流程文档，未随公开仓库发布）。
 
 ## 二次开发与衍生版
 
@@ -70,8 +71,8 @@
 
 ## 贡献者
 
-- GC Brain（项目署名）
-- 参与贡献的成员英文名由维护方确认后在此追加。
+- **GC Brain**（项目署名，指 GC 头马俱乐部大脑项目组的贡献者集体）
+- 完整名单与分工见 [CONTRIBUTORS.md](CONTRIBUTORS.md)
 
 ## 来源与联系方式
 
