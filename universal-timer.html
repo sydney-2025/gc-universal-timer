@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<!--
+GC Universal Timer
+Copyright (c) 2026 GC Brain
+SPDX-License-Identifier: MIT
+See LICENSE for the full license text.
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>头马通用计时器 · Universal Timer（各俱乐部通用）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #14161f;
+    --card: #1e2230;
+    --border: #2e3448;
+    --text: #e8eaf0;
+    --dim: #9aa0b4;
+    --accent: #f5c518;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --blue: #3b82f6;
+  }
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 12px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.3em; text-align: center; padding: 10px 0 14px; }
+  h1 .en { color: var(--dim); font-size: 0.7em; font-weight: normal; }
+
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 14px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card-title { font-size: 0.95em; color: var(--accent); margin-bottom: 10px; font-weight: bold; }
+
+  /* 会议信息 */
+  .meeting-inputs { display: grid; grid-template-columns: 1fr 130px; gap: 8px; }
+  input[type="text"], input[type="date"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #161927;
+    color: var(--text);
+    font-size: 1em;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  /* 角色预设 */
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .preset-btn {
+    padding: 12px 8px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: #161927;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.9em;
+    text-align: center;
+    transition: border-color .15s;
+  }
+  .preset-btn .sub { display: block; font-size: 0.78em; color: var(--dim); margin-top: 3px; }
+  .preset-btn.active { border-color: var(--accent); background: rgba(245,197,24,.12); }
+
+  /* 快速计时（特殊环节，≤7 分钟快捷键 + 自定义分钟数） */
+  .quick-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 2px 0 8px; }
+  .quick-btn {
+    padding: 7px 2px; border: 1.5px solid rgba(245,197,24,.5); border-radius: 8px;
+    background: rgba(245,197,24,.08); color: var(--accent); cursor: pointer;
+    font-size: 12px; font-weight: bold; transition: background .15s;
+  }
+  .quick-btn:hover { background: rgba(245,197,24,.25); }
+  .quick-btn.active { background: rgba(245,197,24,.35); border-color: var(--accent); }
+  .quick-custom { display: flex; gap: 6px; }
+  .quick-custom input {
+    flex: 1; min-width: 0; text-align: center;
+    padding: 7px 8px; border: 1.5px solid rgba(245,197,24,.5); border-radius: 8px;
+    background: #161927; color: var(--accent); font-size: 0.9em; font-family: inherit;
+  }
+  .quick-custom input::placeholder { color: var(--dim); font-weight: normal; }
+  .quick-custom .quick-btn { flex-shrink: 0; padding: 7px 14px; }
+
+  .field { margin-top: 10px; }
+  .field label { display: block; font-size: 0.8em; color: var(--dim); margin-bottom: 4px; }
+  .thresholds { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .thresholds .t { text-align: center; }
+  .thresholds .t label { font-size: 0.78em; display: block; margin-bottom: 4px; }
+  .thresholds input { text-align: center; font-family: Consolas, monospace; }
+  .t.g label { color: var(--green); }
+  .t.y label { color: var(--yellow); }
+  .t.r label { color: var(--red); }
+
+  /* 计时显示 */
+  .timer-box {
+    text-align: center;
+    border-radius: 14px;
+    padding: 22px 12px;
+    background: #10121b;
+    border: 2px solid var(--border);
+    transition: background .4s, border-color .4s;
+  }
+  .timer-box.green  { background: rgba(34,197,94,.22);  border-color: var(--green); }
+  .timer-box.yellow { background: rgba(234,179,8,.25);  border-color: var(--yellow); }
+  .timer-box.red    { background: rgba(239,68,68,.28);  border-color: var(--red); }
+  .timer-box.over   { animation: flash 1s infinite; }
+  @keyframes flash {
+    0%, 100% { background: rgba(239,68,68,.45); border-color: var(--red); }
+    50%      { background: rgba(239,68,68,.12); border-color: #7f1d1d; }
+  }
+  .now-role { font-size: 1em; color: var(--dim); }
+  .now-speaker { font-size: 1.5em; font-weight: bold; color: var(--accent); margin: 4px 0; min-height: 1.3em; }
+  .now-time {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 4.6em;
+    font-weight: bold;
+    letter-spacing: 4px;
+    line-height: 1.1;
+  }
+  @media (max-width: 860px) { .now-time { font-size: 3.4em; } }
+
+  /* ---------- 手机端适配 ---------- */
+  @media (max-width: 860px) {
+    /* 标题：英文副题独占一行，避免「各俱/乐部通用」腰斩断行 */
+    h1 { font-size: 1.15em; }
+    h1 .en { display: block; margin-top: 3px; }
+    /* 会议信息：名称/日期各一行，日期不再被 130px 裁掉 */
+    .meeting-inputs { grid-template-columns: 1fr; }
+    /* 大按钮：不换行，「记录并下一位」「生成计时报告」完整显示 */
+    .btn { padding: 14px 4px; font-size: 0.9em; white-space: nowrap; }
+    /* 手机没有键盘，快捷键提示隐藏 */
+    .kbd-hint { display: none; }
+  }
+  .now-status { font-size: 1.05em; margin-top: 6px; min-height: 1.4em; }
+  .now-thresholds { font-size: 0.8em; color: var(--dim); margin-top: 6px; font-family: Consolas, monospace; }
+
+  /* 大按钮 */
+  .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .btn {
+    padding: 18px 8px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.15em;
+    font-weight: bold;
+    cursor: pointer;
+    color: #fff;
+    transition: transform .1s, opacity .15s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-start { background: #16a34a; }
+  .btn-start.pause { background: #ca8a04; }
+  .btn-next  { background: #2563eb; }
+  .btn-reset { background: #4b5563; }
+  .btn-fs    { background: #7c3aed; }
+  .btn-report{ background: #0d9488; }
+  .btn-sm {
+    padding: 9px 14px; font-size: 0.9em; border-radius: 8px;
+    border: 1px solid var(--border); background: #161927; color: var(--text); cursor: pointer;
+  }
+  .btn-sm:hover { border-color: var(--accent); }
+  .kbd-hint { text-align: center; color: var(--dim); font-size: 0.78em; margin-top: 10px; }
+  kbd {
+    background: #2a2f42; border-radius: 4px; padding: 1px 6px;
+    font-family: Consolas, monospace; font-size: 0.95em;
+  }
+
+  /* 环节总倒计时（平行计时线）：TT 等大环节与个人计时并行（2026-09-01 会员需求） */
+  .seg-box { margin-top: 14px; border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; }
+  .seg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 0.9em; font-weight: bold; color: var(--accent); }
+  .seg-presets { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .seg-presets input {
+    width: 62px; text-align: center; padding: 6px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: #161927; color: var(--text); font-size: 0.9em; font-family: inherit;
+  }
+  .seg-presets .btn-sm { padding: 6px 10px; font-size: 0.82em; }
+  .seg-main { margin-top: 10px; }
+  .seg-info { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  #segRemain { font-family: Consolas, "Courier New", monospace; font-size: 1.9em; font-weight: bold; }
+  #segMeta { font-size: 0.8em; color: var(--dim); }
+  .seg-bar { margin-top: 6px; height: 12px; border-radius: 99px; background: #10121b; overflow: hidden; }
+  .seg-fill { height: 100%; width: 100%; border-radius: 99px; background: var(--green); transition: width .5s linear, background .3s; }
+  .seg-fill.warn { background: var(--yellow); }
+  .seg-fill.danger { background: var(--red); }
+  .seg-box.done #segRemain { color: var(--red); animation: segFlash 1s infinite; }
+  .seg-box.over #segRemain { color: var(--red); }  /* 超时但已暂停/终止：静态红，不闪 */
+  @keyframes segFlash { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+  .btn-term { border-color: rgba(239,68,68,.5); color: var(--red); }
+  .seg-controls { display: flex; gap: 8px; margin-top: 10px; }
+  .seg-controls .btn-sm { flex: 1; padding: 8px 10px; }
+  .seg-tip { margin-top: 8px; font-size: 0.78em; color: var(--dim); line-height: 1.6; }
+
+  /* 记录表 */
+  table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+  th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--dim); font-weight: normal; font-size: 0.85em; }
+  td.num, th.num { text-align: right; font-family: Consolas, monospace; }
+  .badge { padding: 2px 9px; border-radius: 12px; font-size: 0.82em; white-space: nowrap; }
+  .badge.ok    { background: rgba(34,197,94,.18);  color: var(--green); }
+  .badge.under { background: rgba(59,130,246,.18); color: #60a5fa; }
+  .badge.over  { background: rgba(239,68,68,.18);  color: var(--red); }
+  .del-btn { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 1em; }
+  .del-btn:hover { color: var(--red); }
+  .empty-tip { text-align: center; color: var(--dim); padding: 16px; }
+  .table-tools { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* 报告 */
+  #reportText {
+    min-height: 220px; font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85em; white-space: pre; line-height: 1.5; resize: vertical;
+  }
+  .report-tools { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* 全屏灯模式 */
+  #lightMode {
+    display: none;
+    position: fixed; inset: 0; z-index: 999;
+    background: #0a0b10;
+    flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none;
+  }
+  #lightMode.show { display: flex; }
+  #lightMode.green  { background: #15803d; }
+  #lightMode.yellow { background: #a16207; }
+  #lightMode.red    { background: #b91c1c; }
+  #lightMode.red.over { animation: fsFlash .8s infinite; }
+  @keyframes fsFlash {
+    0%, 100% { background: #b91c1c; }
+    50%      { background: #450a0a; }
+  }
+  #fsSpeaker { font-size: 4vw; font-weight: bold; opacity: .95; }
+  #fsRole { font-size: 2.2vw; opacity: .75; margin-top: 1vh; }
+  #fsTime {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 22vw; font-weight: bold; line-height: 1.05; letter-spacing: 1vw;
+  }
+  #fsStatus { font-size: 3vw; margin-top: 1vh; opacity: .9; }
+  #fsHint { position: fixed; bottom: 12px; right: 16px; font-size: 12px; opacity: .4; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>⏱️ 头马通用计时器 <span class="en">Universal Timer · 各俱乐部通用</span></h1>
+
+  <div class="grid">
+    <!-- 左栏：设置 -->
+    <div>
+      <div class="card">
+        <div class="card-title">📋 会议信息</div>
+        <div class="meeting-inputs">
+          <input type="text" id="meetingName" placeholder="会议名称，如 GC 第1100次会议" onchange="saveState()">
+          <input type="date" id="meetingDate" onchange="saveState()">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎭 角色预设（点击选用，阈值可改）</div>
+        <div class="preset-grid" id="presetGrid"></div>
+
+        <div class="card-title" style="margin-top:14px;">⚡ 快速计时（特殊环节可自定义分钟）</div>
+        <div class="quick-grid">
+          <button class="quick-btn" data-min onclick="quickTimer(1, this)">1′</button>
+          <button class="quick-btn" data-min onclick="quickTimer(2, this)">2′</button>
+          <button class="quick-btn" data-min onclick="quickTimer(3, this)">3′</button>
+          <button class="quick-btn" data-min onclick="quickTimer(4, this)">4′</button>
+          <button class="quick-btn" data-min onclick="quickTimer(5, this)">5′</button>
+          <button class="quick-btn" data-min onclick="quickTimer(6, this)">6′</button>
+          <button class="quick-btn" data-min onclick="quickTimer(7, this)">7′</button>
+        </div>
+        <div class="quick-custom">
+          <input type="number" id="quickCustomMin" min="0.5" max="180" step="0.5"
+                 placeholder="自定义分钟数，如 8、10、12.5"
+                 onkeydown="if(event.key==='Enter')quickTimerCustom()">
+          <button class="quick-btn" onclick="quickTimerCustom()">设定</button>
+        </div>
+
+        <div class="field">
+          <label>演讲者姓名</label>
+          <input type="text" id="speakerName" placeholder="输入姓名...">
+        </div>
+        <div class="field">
+          <label>角色名称（可自定义）</label>
+          <input type="text" id="roleName" placeholder="如 Prepared Speech">
+        </div>
+
+        <div class="thresholds">
+          <div class="t g"><label>🟢 绿牌</label><input type="text" id="greenTime" value="5:00" onchange="onThresholdChange()"></div>
+          <div class="t y"><label>🟡 黄牌</label><input type="text" id="yellowTime" value="6:00" onchange="onThresholdChange()"></div>
+          <div class="t r"><label>🔴 红牌</label><input type="text" id="redTime" value="7:00" onchange="onThresholdChange()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右栏：计时 + 记录 + 报告 -->
+    <div>
+      <div class="card">
+        <div class="timer-box" id="timerBox">
+          <div class="now-role" id="nowRole">请选择角色预设</div>
+          <div class="now-speaker" id="nowSpeaker"></div>
+          <div class="now-time" id="nowTime">00:00</div>
+          <div class="now-status" id="nowStatus">就绪</div>
+          <div class="now-thresholds" id="nowThresholds"></div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-start" id="startBtn" onclick="toggleTimer()">▶ 开始</button>
+          <button class="btn btn-next" id="nextBtn" onclick="recordAndNext()" disabled>⏹ 记录并下一位</button>
+          <button class="btn btn-reset" onclick="resetTimer()">↺ 重置</button>
+        </div>
+        <div class="controls" style="grid-template-columns:1fr 1fr;">
+          <button class="btn btn-fs" onclick="enterLightMode()">🖥️ 全屏三色灯（投屏）</button>
+          <button class="btn btn-report" onclick="showReport()">📄 生成计时报告</button>
+        </div>
+
+        <!-- 环节总倒计时：与个人计时平行的第二条时间线（TT 30′ 等大环节用） -->
+        <div class="seg-box" id="segBox">
+          <div class="seg-head">
+            <span>⏳ 环节总倒计时（平行）</span>
+            <span class="seg-presets">
+              <button class="btn-sm" onclick="setSegment(30)">TT 30′</button>
+              <button class="btn-sm" onclick="setSegment(20)">20′</button>
+              <button class="btn-sm" onclick="setSegment(15)">15′</button>
+              <input type="number" id="segCustomMin" min="1" max="180" step="1" placeholder="分钟"
+                     onkeydown="if(event.key==='Enter')setSegmentCustom()">
+              <button class="btn-sm" onclick="setSegmentCustom()">设定</button>
+            </span>
+          </div>
+          <div class="seg-main" id="segMain" style="display:none;">
+            <div class="seg-info">
+              <span id="segRemain">30:00</span>
+              <span id="segMeta"></span>
+            </div>
+            <div class="seg-bar"><div class="seg-fill" id="segFill"></div></div>
+            <div class="seg-controls">
+              <button class="btn-sm" id="segStartBtn" onclick="toggleSegment()">⏸ 暂停</button>
+              <button class="btn-sm btn-term" id="segEndBtn" onclick="endSegment()">■ 终止</button>
+              <button class="btn-sm" onclick="resetSegment()">↺ 重置环节</button>
+            </div>
+          </div>
+          <div class="seg-tip" id="segTip">为即兴演讲等大环节开一条平行倒计时：个人计时照常「记录并下一位」，环节条不停，随时看剩余时间、还够约几人上台；到 0 后转入超时计时（红色 +X 闪烁提醒），环节结束点「■ 终止」收表（静态保留读数、不再闪烁）。时间可自定义，别的大环节也能用。</div>
+        </div>
+        <div class="kbd-hint">
+          快捷键：<kbd>空格</kbd> 开始/暂停 · <kbd>L</kbd> 记录并下一位 · <kbd>R</kbd> 重置 · <kbd>F</kbd> 全屏灯 · <kbd>Esc</kbd> 退出全屏
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📝 本场记录（<span id="recCount">0</span> 人 · 合格 <span id="okCount">0</span> 人）</div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>#</th><th>姓名</th><th>角色</th><th class="num">用时</th><th>状态</th><th></th></tr>
+            </thead>
+            <tbody id="recordBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-tip" id="emptyTip">还没有记录，开始计时后按「记录并下一位」保存</div>
+        <div class="table-tools">
+          <button class="btn-sm" onclick="clearRecords()">🗑️ 清空记录</button>
+        </div>
+      </div>
+
+      <div class="card" id="reportCard" style="display:none;">
+        <div class="card-title">📄 Timer's Report 计时员报告（可直接复制朗读）</div>
+        <textarea id="reportText" readonly></textarea>
+        <div class="report-tools">
+          <button class="btn-sm" onclick="copyReport()">📋 复制到剪贴板</button>
+          <button class="btn-sm" onclick="downloadReport()">⬇️ 下载 TXT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 全屏三色灯 -->
+<div id="lightMode" onclick="exitLightMode()">
+  <div id="fsSpeaker"></div>
+  <div id="fsRole"></div>
+  <div id="fsTime">00:00</div>
+  <div id="fsStatus"></div>
+  <div id="fsHint">点击任意处或按 Esc 退出</div>
+</div>
+
+<script>
+'use strict';
+
+/* ================= 纯逻辑（可测试） ================= */
+
+// 角色预设：秒
+const PRESETS = [
+  { key: 'speech',    name: '备稿演讲',   en: 'Prepared Speech',   green: 300, yellow: 360, red: 420 },
+  { key: 'tt',        name: '即兴演讲',   en: 'Table Topics',      green: 60,  yellow: 90,  red: 120 },
+  { key: 'eval',      name: '点评',       en: 'Evaluation',        green: 120, yellow: 150, red: 180 },
+  { key: 'custom',    name: '自定义',     en: 'Custom',            green: 60,  yellow: 90,  red: 120 }
+];
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+// 秒 -> "M:SS"
+function formatTime(sec) {
+  sec = Math.max(0, Math.round(sec));
+  return Math.floor(sec / 60) + ':' + pad2(sec % 60);
+}
+
+// "M:SS" 或 "SS" -> 秒，非法返回 null
+function parseTime(str) {
+  if (typeof str !== 'string') return null;
+  const s = str.trim();
+  if (!/^\d{1,3}(:\d{1,2})?$/.test(s)) return null;
+  const parts = s.split(':');
+  if (parts.length === 2 && parseInt(parts[1], 10) > 59) return null;
+  const sec = parts.length === 2
+    ? parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
+    : parseInt(parts[0], 10);
+  return isNaN(sec) ? null : sec;
+}
+
+// 状态判定：under(<绿) / ok(绿~红+30″宽限内) / over(≥红+30″)
+// 宽限口径与亮灯一致（lightState）：红牌后 30 秒内收尾仍算合格，超过宽限才记超时
+function judgeStatus(seconds, greenSec, redSec) {
+  if (seconds < greenSec) return 'under';
+  if (seconds >= redSec + 30) return 'over';
+  return 'ok';
+}
+
+// 当前处于哪个灯色：none / green / yellow / red / over(红后30秒仍继续)
+function lightState(seconds, greenSec, yellowSec, redSec) {
+  if (seconds >= redSec + 30) return 'over';
+  if (seconds >= redSec) return 'red';
+  if (seconds >= yellowSec) return 'yellow';
+  if (seconds >= greenSec) return 'green';
+  return 'none';
+}
+
+const STATUS_TEXT = {
+  under: { zh: '时间不足', en: 'Under time' },
+  ok:    { zh: '合格',     en: 'Qualified' },
+  over:  { zh: '超时',     en: 'Over time' }
+};
+
+// 生成中英双语 Timer's Report 纯文本
+// seg：环节总计时（平行倒计时线，典型为 Table Topics 30′）结果，null/缺省则不输出该节
+function generateReport(records, meetingName, meetingDate, seg) {
+  const name = (meetingName || 'GC Toastmasters Meeting').trim();
+  const date = (meetingDate || new Date().toISOString().slice(0, 10)).trim();
+  const L = [];
+  L.push("TIMER'S REPORT 计时员报告");
+  L.push(name + ' | ' + date);
+  L.push('');
+  L.push('No. | Speaker 姓名 | Role 角色 | Time 用时 | Status 状态');
+  L.push('----+--------------|-----------|-----------|------------------');
+  records.forEach(function (r, i) {
+    const st = STATUS_TEXT[r.status] || STATUS_TEXT.ok;
+    let extra = '';
+    if (r.status === 'over' && r.overBy > 0) extra = ' (+' + formatTime(r.overBy) + ')';
+    if (r.status === 'under') extra = ' (-' + formatTime(r.green - r.time) + ')';
+    L.push((i + 1) + ' | ' + r.speaker + ' | ' + r.role + ' | ' +
+      formatTime(r.time) + ' | ' + st.zh + ' ' + st.en + extra);
+  });
+  L.push('');
+  const okCount = records.filter(function (r) { return r.status === 'ok'; }).length;
+  // 合格率口径与页面判定一致：合格 = 按 judgeStatus 判为 ok 的环节（红牌后 30″ 宽限内收尾；
+  // 不足绿牌为 under 不算合格、超红+30″ 为 over 不算合格）
+  const pct = records.length ? Math.round(okCount / records.length * 100) : 0;
+  L.push('Summary 总结: ' + okCount + ' of ' + records.length +
+    ' speakers qualified (' + pct + '%). 共 ' + records.length + ' 位演讲者，' + okCount +
+    ' 位在合格时间内完成，合格率 ' + pct + '%。');
+  // 环节总计时（如 Table Topics 30′ 平行倒计时）结果同步进报表（2026-10-07 例会升级需求）
+  if (seg && seg.total > 0) {
+    const segOver = seg.elapsed > seg.total;
+    L.push('⏳ Segment 环节计时: 限时 ' + formatTime(seg.total) + '，实际 ' +
+      formatTime(seg.elapsed) +
+      (segOver ? '，超时 +' + formatTime(seg.elapsed - seg.total) : '，未超时') +
+      (seg.ended ? '' : '（进行中）') + '。');
+  }
+  L.push("Reported by Timer 计时员汇报完毕。");
+  return L.join('\n');
+}
+
+/* ================= 状态与计时 ================= */
+
+const STORE_KEY = 'gcUniversalTimer.v1';
+
+let greenSec = 300, yellowSec = 360, redSec = 420;
+let records = [];
+let running = false;
+let startStamp = 0;     // 本次 running 的起点（Date.now 减去已累计）
+let accruedMs = 0;      // 暂停时累计的毫秒
+let rafId = null;
+let lastLight = 'none';
+
+function elapsedSeconds() {
+  const ms = running ? (Date.now() - startStamp) : accruedMs;
+  return Math.floor(ms / 1000);
+}
+
+function readThresholdInputs() {
+  const g = parseTime(document.getElementById('greenTime').value);
+  const y = parseTime(document.getElementById('yellowTime').value);
+  const r = parseTime(document.getElementById('redTime').value);
+  if (g !== null && y !== null && r !== null && g <= y && y <= r) {
+    greenSec = g; yellowSec = y; redSec = r;
+  } else {
+    // 回显当前合法值
+    document.getElementById('greenTime').value = formatTime(greenSec);
+    document.getElementById('yellowTime').value = formatTime(yellowSec);
+    document.getElementById('redTime').value = formatTime(redSec);
+  }
+}
+
+function onThresholdChange() {
+  readThresholdInputs();
+  renderStatic();
+  saveState();
+}
+
+/* ================= UI 渲染 ================= */
+
+function renderPresets() {
+  const grid = document.getElementById('presetGrid');
+  grid.innerHTML = '';
+  PRESETS.forEach(function (p) {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.id = 'preset-' + p.key;
+    btn.innerHTML = p.name + ' ' + p.en +
+      '<span class="sub">🟢' + formatTime(p.green) + ' 🟡' + formatTime(p.yellow) + ' 🔴' + formatTime(p.red) + '</span>';
+    btn.onclick = function () { selectPreset(p.key); };
+    grid.appendChild(btn);
+  });
+}
+
+function selectPreset(key) {
+  const p = PRESETS.find(function (x) { return x.key === key; });
+  if (!p) return;
+  greenSec = p.green; yellowSec = p.yellow; redSec = p.red;
+  document.getElementById('greenTime').value = formatTime(p.green);
+  document.getElementById('yellowTime').value = formatTime(p.yellow);
+  document.getElementById('redTime').value = formatTime(p.red);
+  if (key !== 'custom') document.getElementById('roleName').value = p.name + ' ' + p.en;
+  document.querySelectorAll('.preset-btn').forEach(function (b) { b.classList.remove('active'); });
+  const active = document.getElementById('preset-' + key);
+  if (active) active.classList.add('active');
+  resetTimer();
+  renderStatic();
+  saveState();
+}
+
+function currentRole() {
+  return document.getElementById('roleName').value.trim() || '自定义 Custom';
+}
+
+/* ================= 快速计时 ================= */
+// 头马规则：≤4 分钟 剩1′绿/30″黄/到时红；>4 分钟 剩2′绿/1′黄/到时红（同 01-通用/universal_timer.html）
+function quickTimer(minutes, btn) {
+  const totalSec = Math.round(minutes * 60);
+  if (minutes <= 4) {
+    greenSec = totalSec - 60; yellowSec = totalSec - 30; redSec = totalSec;
+  } else {
+    greenSec = totalSec - 120; yellowSec = totalSec - 60; redSec = totalSec;
+  }
+  document.getElementById('greenTime').value = formatTime(greenSec);
+  document.getElementById('yellowTime').value = formatTime(yellowSec);
+  document.getElementById('redTime').value = formatTime(redSec);
+  document.getElementById('roleName').value = minutes + ' 分钟计时 Quick ' + minutes + 'min';
+  document.querySelectorAll('.preset-btn').forEach(function (b) { b.classList.remove('active'); });
+  document.querySelectorAll('.quick-btn[data-min]').forEach(function (b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  resetTimer();
+  renderStatic();
+  saveState();
+}
+
+// 自定义分钟数（特殊环节超过 7 分钟时用，Yang 建议 2026-08-25）
+function quickTimerCustom() {
+  const input = document.getElementById('quickCustomMin');
+  const v = parseFloat(input.value);
+  if (!v || v <= 0 || v > 180) {
+    alert('请输入 0.5 ~ 180 之间的分钟数');
+    input.focus();
+    return;
+  }
+  quickTimer(v, null);
+}
+
+function renderStatic() {
+  document.getElementById('nowRole').textContent = currentRole();
+  const sp = document.getElementById('speakerName').value.trim();
+  document.getElementById('nowSpeaker').textContent = sp;
+  document.getElementById('nowThresholds').textContent =
+    '🟢 ' + formatTime(greenSec) + '  🟡 ' + formatTime(yellowSec) + '  🔴 ' + formatTime(redSec);
+  document.getElementById('fsSpeaker').textContent = sp;
+  document.getElementById('fsRole').textContent = currentRole();
+}
+
+function renderClock() {
+  const sec = elapsedSeconds();
+  const over = Math.max(0, sec - redSec);
+  const light = lightState(sec, greenSec, yellowSec, redSec);
+
+  document.getElementById('nowTime').textContent = formatTime(sec);
+  document.getElementById('fsTime').textContent = formatTime(sec);
+
+  // light 对应的 CSS 类：over 态需要同时带 red 和 over（闪烁动画）
+  const lightCls = light === 'over' ? 'red over' : light;
+  const timing = sec > 0 || running;
+
+  const box = document.getElementById('timerBox');
+  box.className = 'timer-box' + (timing && light !== 'none' ? ' ' + lightCls : '');
+  const lm = document.getElementById('lightMode');
+  if (lm.classList.contains('show')) {
+    lm.className = 'show' + (timing && light !== 'none' ? ' ' + lightCls : '');
+  }
+
+  let status = '就绪';
+  if (sec > 0 || running) {
+    if (light === 'over') status = '🔴 已超时 +' + formatTime(over);
+    else if (light === 'red') status = '🔴 时间到，请收尾';
+    else if (light === 'yellow') status = '🟡 注意时间';
+    else if (light === 'green') status = '🟢 已达最短合格时间';
+    else status = '⏱️ 计时中';
+  }
+  document.getElementById('nowStatus').textContent = status;
+  document.getElementById('fsStatus').textContent = status;
+
+  // 到点提示音
+  if (light !== lastLight) {
+    if (light === 'green') beep(1);
+    else if (light === 'yellow') beep(2);
+    else if (light === 'red') beep(3);
+    lastLight = light;
+  }
+}
+
+function renderRecords() {
+  const tbody = document.getElementById('recordBody');
+  tbody.innerHTML = '';
+  records.forEach(function (r, i) {
+    const st = STATUS_TEXT[r.status];
+    let detail = formatTime(r.time);
+    if (r.status === 'over' && r.overBy > 0) detail += ' (+' + formatTime(r.overBy) + ')';
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + (i + 1) + '</td>' +
+      '<td></td>' +
+      '<td></td>' +
+      '<td class="num">' + detail + '</td>' +
+      '<td><span class="badge ' + r.status + '">' + st.zh + '</span></td>' +
+      '<td><button class="del-btn" data-i="' + i + '" title="删除">✕</button></td>';
+    tr.children[1].textContent = r.speaker;
+    tr.children[2].textContent = r.role;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('.del-btn').forEach(function (b) {
+    b.onclick = function () { deleteRecord(parseInt(b.getAttribute('data-i'), 10)); };
+  });
+  document.getElementById('recCount').textContent = records.length;
+  document.getElementById('okCount').textContent =
+    records.filter(function (r) { return r.status === 'ok'; }).length;
+  document.getElementById('emptyTip').style.display = records.length ? 'none' : 'block';
+}
+
+/* ================= 计时控制 ================= */
+
+function tick() {
+  renderClock();
+  rafId = running ? requestAnimationFrame(tick) : null;
+}
+
+function toggleTimer() {
+  if (running) {
+    // 暂停
+    accruedMs = Date.now() - startStamp;
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    document.getElementById('startBtn').textContent = '▶ 继续';
+    document.getElementById('startBtn').classList.remove('pause');
+  } else {
+    startStamp = Date.now() - accruedMs;
+    running = true;
+    renderStatic();
+    document.getElementById('startBtn').textContent = '⏸ 暂停';
+    document.getElementById('startBtn').classList.add('pause');
+    document.getElementById('nextBtn').disabled = false;
+    tick();
+  }
+  renderClock();
+}
+
+function resetTimer() {
+  running = false;
+  accruedMs = 0;
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  lastLight = 'none';
+  document.getElementById('startBtn').textContent = '▶ 开始';
+  document.getElementById('startBtn').classList.remove('pause');
+  document.getElementById('nextBtn').disabled = true;
+  renderClock();
+}
+
+function recordAndNext() {
+  const sec = elapsedSeconds();
+  if (sec <= 0 && !running && accruedMs === 0) return;
+  const speaker = document.getElementById('speakerName').value.trim() || '（未命名）';
+  const status = judgeStatus(sec, greenSec, redSec);
+  records.push({
+    speaker: speaker,
+    role: currentRole(),
+    time: sec,
+    status: status,
+    overBy: status === 'over' ? sec - redSec : 0,
+    green: greenSec,
+    red: redSec
+  });
+  resetTimer();
+  renderRecords();
+  saveState();
+  // 保留角色，清空姓名等待下一位
+  document.getElementById('speakerName').value = '';
+  renderStatic();
+  document.getElementById('speakerName').focus();
+}
+
+function deleteRecord(i) {
+  records.splice(i, 1);
+  renderRecords();
+  saveState();
+}
+
+/* ================= 环节总倒计时（平行计时线） ================= */
+/* 与个人计时完全独立：主表「记录并下一位」只重置个人计时，环节条一直倒数。
+   典型场景：TT 环节 30′，TTM 随时看剩余时间、估算还够几人上台（按当前个人红牌+30″宽限估）。 */
+let segTotal = 0;        // 环节总秒数，0 = 未设置
+let segRunning = false;
+let segStamp = 0;        // running 起点（Date.now 减去已累计）
+let segAccruedMs = 0;
+let segTimerId = null;
+let segEndedBeeped = false;
+let segEnded = false;    // 已手动终止（静态显示最终读数，不再闪烁）
+
+function segElapsedSeconds() {
+  const ms = segRunning ? (Date.now() - segStamp) : segAccruedMs;
+  return Math.floor(ms / 1000);
+}
+
+function setSegment(minutes) {
+  const total = Math.round(minutes * 60);
+  if (!total || total <= 0) return;
+  segTotal = total;
+  segAccruedMs = 0;
+  segEndedBeeped = false;
+  segEnded = false;
+  document.getElementById('segMain').style.display = 'block';
+  document.getElementById('segTip').style.display = 'none';
+  document.getElementById('segBox').classList.remove('done', 'over');
+  document.getElementById('segEndBtn').disabled = false;
+  // 一键设定即开始：点「TT 30′」的时机通常就是环节开始的时机
+  segStamp = Date.now();
+  segRunning = true;
+  document.getElementById('segStartBtn').textContent = '⏸ 暂停';
+  startSegTicker();
+  renderSegment();
+  saveState();
+}
+
+function setSegmentCustom() {
+  const input = document.getElementById('segCustomMin');
+  const v = parseFloat(input.value);
+  if (!v || v <= 0 || v > 180) { alert('请输入 1 ~ 180 之间的分钟数'); input.focus(); return; }
+  setSegment(v);
+}
+
+function toggleSegment() {
+  if (!segTotal) return;
+  if (segRunning) {
+    segAccruedMs = Date.now() - segStamp;
+    segRunning = false;
+    document.getElementById('segStartBtn').textContent = '▶ 继续';
+  } else if (segEnded) {
+    // 已终止后再按 = 从头开始新一轮
+    segAccruedMs = 0;
+    segEndedBeeped = false;
+    segEnded = false;
+    document.getElementById('segEndBtn').disabled = false;
+    segStamp = Date.now();
+    segRunning = true;
+    document.getElementById('segStartBtn').textContent = '⏸ 暂停';
+  } else {
+    // 暂停后继续：超时中也照常接着走（Byron 反馈：环节超时由人手动终止，不自动复位）
+    segStamp = Date.now() - segAccruedMs;
+    segRunning = true;
+    document.getElementById('segStartBtn').textContent = '⏸ 暂停';
+  }
+  startSegTicker();
+  renderSegment();
+  saveState();
+}
+
+/* 手动终止（2026-09-01 晚 Warren 反馈）：TT 环节结束后计时条一直闪不合适——
+   终止后冻结读数、静态显示（不再闪烁），再点「▶ 重新开始」开新一轮 */
+function endSegment() {
+  if (!segTotal || segEnded) return;
+  if (segRunning) {
+    segAccruedMs = Date.now() - segStamp;
+    segRunning = false;
+  }
+  if (segTimerId) { clearInterval(segTimerId); segTimerId = null; }
+  segEnded = true;
+  document.getElementById('segStartBtn').textContent = '▶ 重新开始';
+  document.getElementById('segEndBtn').disabled = true;
+  renderSegment();
+  saveState();
+}
+
+function resetSegment() {
+  segRunning = false;
+  segTotal = 0;
+  segAccruedMs = 0;
+  segEndedBeeped = false;
+  segEnded = false;
+  if (segTimerId) { clearInterval(segTimerId); segTimerId = null; }
+  document.getElementById('segMain').style.display = 'none';
+  document.getElementById('segTip').style.display = '';
+  document.getElementById('segBox').classList.remove('done', 'over');
+  document.getElementById('segEndBtn').disabled = false;
+  saveState();
+}
+
+function startSegTicker() {
+  if (segTimerId) { clearInterval(segTimerId); segTimerId = null; }
+  if (segRunning) segTimerId = setInterval(renderSegment, 500);
+}
+
+function renderSegment() {
+  if (!segTotal) return;
+  const elapsed = segElapsedSeconds();
+  const remain = segTotal - elapsed;
+  const over = Math.max(0, -remain);          // 到点后的超时秒数（2026-09-01 Byron 反馈：继续计时，手动终止）
+  const remainShow = Math.max(0, remain);
+  document.getElementById('segRemain').textContent =
+    formatTime(remainShow) + (over > 0 ? ' +' + formatTime(over) : '');
+  // 估算还够几人上台：按当前个人红牌 + 30″ 宽限估（TT 默认 2′+0.5′ = 2.5′/人）
+  const perPerson = redSec + 30;
+  const n = Math.floor(remainShow / perPerson);
+  document.getElementById('segMeta').textContent =
+    '已过 ' + formatTime(elapsed) + ' / 共 ' + formatTime(segTotal) +
+    (remain > 0 ? ' · 还够约 ' + n + ' 人上台（按每人 ' + formatTime(perPerson) + ' 估）'
+                : segEnded ? ' · 环节时间到 +' + formatTime(over) + '（已终止）'
+                           : ' · 环节时间到 +' + formatTime(over) + '（点暂停或终止手动收表）');
+  const fill = document.getElementById('segFill');
+  fill.style.width = (remainShow / segTotal * 100) + '%';
+  fill.className = 'seg-fill' + (remain <= 120 ? ' danger' : remain <= 300 ? ' warn' : '');
+  // 超时闪烁只在进行中提醒；暂停/终止后静态红（Warren：环节结束后一直闪不合适）
+  const box = document.getElementById('segBox');
+  box.classList.toggle('done', remain <= 0 && segRunning);
+  box.classList.toggle('over', remain <= 0 && !segRunning);
+  if (remain <= 0 && !segEndedBeeped) {
+    segEndedBeeped = true;
+    beep(3);
+  }
+}
+
+function clearRecords() {
+  if (!records.length) return;
+  if (confirm('确定清空全部 ' + records.length + ' 条记录？')) {
+    records = [];
+    renderRecords();
+    saveState();
+  }
+}
+
+/* ================= 全屏三色灯 ================= */
+
+function enterLightMode() {
+  renderStatic();
+  renderClock();
+  document.getElementById('lightMode').classList.add('show');
+  const el = document.getElementById('lightMode');
+  if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+}
+
+function exitLightMode() {
+  document.getElementById('lightMode').classList.remove('show');
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+}
+
+/* ================= 报告 ================= */
+
+function showReport() {
+  // 环节总计时结果随报表输出（segTotal=0 表示本场未使用，则不出现该节）
+  const seg = segTotal ? { total: segTotal, elapsed: segElapsedSeconds(), ended: segEnded } : null;
+  const text = generateReport(
+    records,
+    document.getElementById('meetingName').value,
+    document.getElementById('meetingDate').value,
+    seg
+  );
+  document.getElementById('reportText').value = text;
+  const card = document.getElementById('reportCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function copyReport() {
+  const ta = document.getElementById('reportText');
+  const text = ta.value;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () {
+      flashBtn('已复制 ✓');
+    }, function () { fallbackCopy(ta); });
+  } else {
+    fallbackCopy(ta);
+  }
+}
+
+function fallbackCopy(ta) {
+  ta.removeAttribute('readonly');
+  ta.select();
+  document.execCommand('copy');
+  ta.setAttribute('readonly', '');
+  flashBtn('已复制 ✓');
+}
+
+function flashBtn(msg) {
+  const btns = document.querySelectorAll('.report-tools .btn-sm');
+  if (btns[0]) {
+    const old = btns[0].textContent;
+    btns[0].textContent = msg;
+    setTimeout(function () { btns[0].textContent = old; }, 1500);
+  }
+}
+
+function downloadReport() {
+  const text = document.getElementById('reportText').value;
+  const date = document.getElementById('meetingDate').value || new Date().toISOString().slice(0, 10);
+  const blob = new Blob(['﻿' + text], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Timer_Report_' + date + '.txt';
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+/* ================= 提示音（WebAudio，零依赖） ================= */
+
+let audioCtx = null;
+function beep(times) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    for (let i = 0; i < times; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      gain.gain.value = 0.15;
+      const t = audioCtx.currentTime + i * 0.35;
+      osc.start(t);
+      osc.stop(t + 0.2);
+    }
+  } catch (e) { /* 无音频环境时静默 */ }
+}
+
+/* ================= 本地存储 ================= */
+
+function saveState() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      records: records,
+      meetingName: document.getElementById('meetingName').value,
+      meetingDate: document.getElementById('meetingDate').value,
+      roleName: document.getElementById('roleName').value,
+      green: greenSec, yellow: yellowSec, red: redSec,
+      // 环节倒计时：刷新/误关页面后续跑（存绝对时间戳）
+      seg: segTotal ? { total: segTotal, running: segRunning, ended: segEnded,
+                        stamp: segRunning ? segStamp : 0, accrued: segAccruedMs } : null
+    }));
+  } catch (e) { /* file:// 私密模式等场景静默失败 */ }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    records = Array.isArray(s.records) ? s.records : [];
+    if (s.meetingName) document.getElementById('meetingName').value = s.meetingName;
+    if (s.meetingDate) document.getElementById('meetingDate').value = s.meetingDate;
+    if (s.roleName) document.getElementById('roleName').value = s.roleName;
+    if (typeof s.green === 'number' && typeof s.yellow === 'number' && typeof s.red === 'number') {
+      greenSec = s.green; yellowSec = s.yellow; redSec = s.red;
+      document.getElementById('greenTime').value = formatTime(greenSec);
+      document.getElementById('yellowTime').value = formatTime(yellowSec);
+      document.getElementById('redTime').value = formatTime(redSec);
+    }
+    // 环节倒计时恢复：在跑的按绝对时间续上（超时中也续走）；恢复时已过 0 的不再响铃
+    if (s.seg && typeof s.seg.total === 'number' && s.seg.total > 0) {
+      segTotal = s.seg.total;
+      segAccruedMs = s.seg.accrued || 0;
+      segEnded = !!s.seg.ended;
+      if (s.seg.running && s.seg.stamp && !segEnded) {
+        segStamp = s.seg.stamp;
+        segRunning = true;
+        if (segElapsedSeconds() >= segTotal) segEndedBeeped = true;
+      }
+      document.getElementById('segMain').style.display = 'block';
+      document.getElementById('segTip').style.display = 'none';
+      document.getElementById('segStartBtn').textContent =
+        segRunning ? '⏸ 暂停' : (segEnded ? '▶ 重新开始' : '▶ 继续');
+      document.getElementById('segEndBtn').disabled = segEnded;
+      startSegTicker();
+      renderSegment();
+    }
+  } catch (e) { /* 数据损坏则忽略 */ }
+}
+
+/* ================= 键盘快捷键 ================= */
+
+document.addEventListener('keydown', function (e) {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); toggleTimer(); }
+  else if (e.code === 'KeyR') { e.preventDefault(); resetTimer(); }
+  else if (e.code === 'KeyL') {
+    e.preventDefault();
+    if (!document.getElementById('nextBtn').disabled) recordAndNext();
+  }
+  else if (e.code === 'KeyF') { e.preventDefault(); enterLightMode(); }
+  else if (e.code === 'Escape') { exitLightMode(); }
+});
+
+document.getElementById('speakerName').addEventListener('input', renderStatic);
+document.getElementById('roleName').addEventListener('input', renderStatic);
+
+/* ================= 初始化 ================= */
+
+renderPresets();
+loadState();
+if (!document.getElementById('meetingDate').value) {
+  document.getElementById('meetingDate').value = new Date().toISOString().slice(0, 10);
+}
+renderStatic();
+renderRecords();
+renderClock();
+</script>
+<a href="/" aria-label="返回主页" style="position:fixed;left:14px;bottom:14px;z-index:60;width:44px;height:44px;border-radius:50%;background:#004165;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:.92">🏠</a>
+</body>
+</html>
