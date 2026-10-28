@@ -22,7 +22,7 @@ MIT 允许使用、修改、再发布、商用和再许可，不要求衍生版�
 以下事项用于把原创来源、品牌和维护分工说清楚，不属于 MIT 自动规定的全部义务：
 
 - 在衍生版工具页面和 README 清楚标注“基于 GC Universal Timer 改编”；
-- 附原版在线地址：<https://gctoastmaster.club/universal-timer.html>；原版 GitHub 仓库发布后，再补充仓库地址；
+- 附原版在线地址：<https://gctoastmaster.club/universal-timer.html> 与仓库地址 <https://github.com/sydney-2025/gc-universal-timer>；
 - 标明衍生版由 D118 独立维护，用户问题和功能需求通过 D118 衍生版仓库或指定渠道反馈；
 - 不把“GC 原创来源”写成“GC 官方维护”“GC 审核认证”或其他可能让人误解的背书；
 - GC 或 Toastmasters 的名称、Logo 仅按双方确认的范围用于事实性来源说明；
@@ -36,6 +36,7 @@ MIT 允许使用、修改、再发布、商用和再许可，不要求衍生版�
 
 原版项目：GC Universal Timer
 原版在线页面：https://gctoastmaster.club/universal-timer.html
+原版仓库：https://github.com/sydney-2025/gc-universal-timer
 
 原版代码采用 MIT License。原项目的版权声明和 MIT 许可证保留在本仓库的
 LICENSE 及相关源文件中。
